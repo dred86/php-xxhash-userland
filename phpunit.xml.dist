@@ -1,0 +1,22 @@
+<phpunit
+    bootstrap="test/bootstrap.php"
+    colors="true"
+    verbose="true">
+
+    <testsuites>
+        <testsuite name="WhatsApp Test Suite">
+            <directory>test</directory>
+        </testsuite>
+    </testsuites>
+
+    <filter>
+        <whitelist>
+            <directory suffix="php">src</directory>
+        </whitelist>
+    </filter>
+
+    <logging>
+        <log type="coverage-html" target="target/coverage" charset="UTF-8"/>
+        <log type="junit" target="target/logs/junit.xml" logIncompleteSkipped="false"/>
+    </logging>
+</phpunit>

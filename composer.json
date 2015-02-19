@@ -1,0 +1,21 @@
+{
+    "name": "mheap/php-xxhash-userland",
+    "description": "Userland implementation of the xxhash function",
+    "require-dev": {
+    },
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Michael Heap",
+            "email": "m@michaelheap.com"
+        }
+    ],
+    "require": {
+        "phpunit/phpunit": "~4.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "mheap\\xxhash\\": "src/mheap/xxhash"
+        }
+    }
+}
