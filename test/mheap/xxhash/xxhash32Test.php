@@ -24,8 +24,8 @@ class xxhash32Test extends \PHPUnit_Framework_TestCase {
     }
 
     public function testSmallInputMultipleOfFour() {
-        $hasher = new \mheap\xxhash\xxhash32(12345);
-        $this->assertEquals("3834992036", $hasher->hash("test"));
+        $hasher = new \mheap\xxhash\xxhash32(0);
+        $this->assertEquals(1042293711, $hasher->update("abcd")->digest());
     }
 
 }

@@ -2,8 +2,6 @@
 
 namespace mheap\xxhash;
 
-$thirtytwo1s = 2^32-1;
-
 class xxhash32
 {
 
@@ -18,9 +16,6 @@ class xxhash32
     protected $inputData = "";
 
     public function __construct($seed) {
-
-        $this->mem_total_size = 16;
-
         $this->seed = $seed;
 
         $this->v1 = $this->seed + static::PRIME1 + static::PRIME2;
@@ -28,102 +23,74 @@ class xxhash32
         $this->v3 = $this->seed + 0;
         $this->v4 = $this->seed - static::PRIME1;
 
-        $this->total_len = 0;
-        $this->memory = array();
-        for ($i=0; $i < $this->mem_total_size; $i++) {
-            $this->memory[$i] = null;
-        }
+        $this->total_length = 0;
+
+        $this->memsize = 0;
     }
 
     public function getSeed() {
         return $this->seed;
     }
 
-    public function update($bytes) {
-        $bytes = array_values(unpack("C*", $bytes));
-
-        $i = 0;
-        $bytes_length = count($bytes);
-        $this->memsize = count($bytes);
-
-        $this->total_len += $bytes_length;
-
-        $memsize = 0;
+    public function update($string) {
+        $data = array_values(unpack("C*", $string));
 
         $p = 0;
+        $len = count($data);
+        $bEnd = $p + $len;
 
-        while (($remaining = $bytes_length - $p)  > 0){
-            $mem_avail = $this->mem_total_size - $memsize;
+        if ($len == 0){ return; }
 
-            $this->memory[$memsize] = $bytes[$p];
+        $this->total_length += $len;
 
-            if($remaining < $mem_avail) {
-                $z = $memsize;
-                while($z < $remaining) {
-                    $currentBytes = isset($bytes[$z]) ? $bytes[$z] : null;
-                    $this->memory[$z] = $currentBytes;
-                    $z++;
-                }
-                $memsize += $remaining;
+        if ($this->memsize == 0) {
+            $this->memory = array();
+        }
+
+        while ($d = array_shift($data)) {
+            if ($this->memsize < 16) {
+                $this->memory[] = $d;
+                $this->memsize++;
+            // We have more data than will fit in memory.
+            // WHAT DO WE DO NOW!?
             } else {
-                $this->memory[$mem_avail] = $bytes[$mem_avail];
+                print_r($data);die;
             }
-
-            $i = 0;
-            foreach (array("v1", "v2", "v3", "v4") as $m) {
-                $p32 = uint32($this->memory[$i] |
-                    ($this->memory[$i+1] << 8) |
-                    ($this->memory[$i+2] << 16) |
-                    ($this->memory[$i+3] << 24));
-
-                $v = uint32($this->{$m}+ $p32 * static::PRIME2);
-                $v = uint32((($v << 13) | ($v >> (32 - 13))) * static::PRIME1);
-                //$this->{$m} = $v;
-                $i += 4;
-            }
-
-            $p += $mem_avail;
         }
 
-        return true;
+        return $this;
+
     }
 
-    public function hash($input) {
-        //$this->inputData = $input;
-        $this->update($input);
-        return $this->doHash();
-    }
-
-    public function doHash(){
-
-        if ($this->total_len >= 16) {
-            $h32 = (($this->v1 << 1) | ($this->v1 >> (32 - 1))) +
-                (($this->v2 << 7) | ($this->v2 >> (32 - 7))) +
-                (($this->v3 << 12) | ($this->v3 >> (32 - 12))) +
-                (($this->v4 << 18) | ($this->v4 >> (32 - 18)));
-        } else {
-            $h32 = $this->seed + static::PRIME5;
-        }
-
-
-        $h32 = uint32($h32 + $this->total_len);
+    public function digest() {
 
         $p = 0;
-        while ($p <= ($this->memsize - 4)){
-            $p32 = uint32($this->memory[$p] |
+        $bEnd = $this->memsize;
+        $u = 0;
+
+        $h32 = $this->seed + static::PRIME5;
+        echo $h32;die;
+
+        $h32 += $this->memsize;
+
+        $p = 0;
+        while ($p <= ($bEnd - 4)) {
+            $p32 = (
+                ($this->memory[$p]) |
                 ($this->memory[$p+1] << 8) |
                 ($this->memory[$p+2] << 16) |
-                ($this->memory[$p+3] << 24));
-            $h32 = uint32($h32 + $p32 * static::PRIME3);
-            $h32 = uint32(uint32(($h32 << 17) | ($h32 >> (32 - 17))) * static::PRIME4);
+                ($this->memory[$p+3] << 24)
+            );
+
+            $h32 = uint32($h32 + ($p32 * static::PRIME3));
+            $h32 = uint32(rotl($h32, 17) * static::PRIME4);
             $p += 4;
         }
 
-
-        while ($p < $this->memsize) {
+        while ($p < $bEnd) {
             $h32 = uint32($h32 + $this->memory[$p] * static::PRIME5);
-            $h32 = uint32(uint32(($h32 << 11) | ($h32 >> (32 - 11))) * static::PRIME1);
-            $p += 1;
+            $h32 = uint32(rotl($h32, 17) * static::PRIME4);
+            $p++;
         }
 
         $h32 ^= $h32 >> 15;
@@ -132,12 +99,28 @@ class xxhash32
         $h32 = uint32($h32 * static::PRIME3);
         $h32 ^= $h32 >> 16;
 
-        return $h32;
+        return dechex($h32);
+
     }
+
 }
 
 function uint32($x) {
-    global $thirtytwo1s;
     return $x & 0b11111111111111111111111111111111;
 }
 
+function rotl($value,$amount) {
+    if ($amount>0) {
+        $amount %= 32;
+        $value = ($value<<$amount) | ($value>>(32-$amount));
+    }
+    return $value;
+}
+
+function rotr($value,$amount) {
+    if ($amount>0) {
+        $amount %= 32;
+        $value = ($value>>$amount) | ($value<<(32-$amount));
+    }
+    return $value;
+}
